@@ -13,5 +13,12 @@
 - Vehicle is [hard-coded](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L333) so that the camera position is always inside the car. Camera positon can also be changed [here](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L1394)
 - Head rotation values come from the [CarlaVR Unity app](https://github.com/skyguy-netizen/CarlaVR) built on the headset
 
+
+## Inputs
+- Input method is currently set to the LogiTech Wheel and Pedals as defined in [SteeringWheelControl](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L757) class
+- You can change input method to KeyBoardControl in the code block [here](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L1736-L1755)
+- Wheel config is in `wheel_config.ini`
+- There was an issue where the Steering Wheel would stop working all of a sudden. It was because the sensitivity is calculated using both max and min values from the config, but if they are the same, then the sensitivity would go to 0. That code block has been commented out [here](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L889-L897), and the current code only relies on the max value defined in the config 
+
 ## Tip on driving in Carla
 - Don't crash :)
