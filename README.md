@@ -1,16 +1,18 @@
-# EE260C_LAB0: Access Carla
-
-Please refer to the instructions [here](https://docs.google.com/document/d/1PwzTUXI43FQObJ2Cy7xu3a_J-AEyEal76FWF_SttEhE/edit?usp=sharing)
+# Carla VR Streaming
 
 # Lab 0 ReadMe
 ## Setup
-Refer to Lab 0 instructions to setup a conda environment. Make sure to active it. Then, start a CARLA simulator.
+- Start a docker CARLA simulator container using the instructions [here](https://github.com/UCR-CISL/Carla-dockers)
+- Make sure to run `xhost +` before running the docker container so we can connect to the simulator
 
-## Traffic Manager
-Run `python3 traffic_manager.py`. Feel free to comment and/or uncomment the sections that run vehicles on autopoilot and that run vehicles on a set trajectory.
+## Manual Control + Streaming
+- Run ```manual_control_streaming.py``` once the Carla simulator has been started in the background
+- Will start a websocket on `ws://0.0.0.0:<port (default is 8765)>`
+- Values can be changed [here](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/main/manual_control_streaming.py#L315)
+- Websocket will send each frame from the [VR camera](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/main/manual_control_streaming.py#L1394C13-L1394C17)
+- It will also [receive current headset orientation](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L248) through the websocket and [update the VR camera transforms](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L1477) to mimic head rotation
+- Vehicle is [hard-coded](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L333) so that the camera position is always inside the car. Camera positon can also be changed [here](https://github.com/skyguy-netizen/CarlaVRStreaming/blob/028093afc9c29aa198c56b6f42a43d3e757108de/manual_control_streaming.py#L1394)
+- Head rotation values come from the [CarlaVR Unity app](https://github.com/skyguy-netizen/CarlaVR) built on the headset
 
-## Bounding Boxes
-Run `python3 bounding_boxes.py`. Feel free to commment and/or uncomment the section that draws 2D bbox and writes to the PASCAL VOC format.
-
-## Instance Segmentation
-Run `python3 instance_segmentation.py`. Change `cam_location`, `cam_rotation`, and the save path as you wish. If a segfault occurs, the instance segmentation image should still save.
+## Tip on driving in Carla
+- Don't crash :)
