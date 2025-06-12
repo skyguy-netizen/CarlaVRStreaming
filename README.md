@@ -1,6 +1,5 @@
 # Carla VR Streaming
 
-# Lab 0 ReadMe
 ## Setup
 - Start a docker CARLA simulator container using the instructions [here](https://github.com/UCR-CISL/Carla-dockers)
 - Make sure to run `xhost +` before running the docker container so we can connect to the simulator
