@@ -231,14 +231,14 @@ def send_camera_feed():
         return
     last_sent_time = now
 
-    # Always get the most recent frame only
+    # just get most recent frame
     while not image_queue.empty():
         try:
             jpeg_data = image_queue.get_nowait()
         except queue.Empty:
             return
 
-    # Only send the latest image
+    # send the latest image
     if jpeg_data:
         encoded = base64.b64encode(jpeg_data).decode("utf-8")
         message = json.dumps({"type": "frame", "data": encoded})
