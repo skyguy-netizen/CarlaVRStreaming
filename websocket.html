@@ -1,0 +1,237 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Carla VR Control</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #video-feed {
+            width: 640px;
+            height: 360px;
+            background: black;
+        }
+        #controls {
+            margin: 10px;
+            text-align: center;
+        }
+        #steering-wheel {
+            width: 150px;
+            height: 150px;
+            margin: 10px auto;
+        }
+        .control-btn {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .control-btn:active {
+            background: #0056b3;
+        }
+        #status {
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Carla VR Control</h1>
+    <canvas id="video-feed" width="640" height="360"></canvas>
+    <div id="controls">
+        <canvas id="steering-wheel" width="150" height="150"></canvas>
+        <div>
+            <button class="control-btn" id="accelerate">Accelerate (W)</button>
+            <button class="control-btn" id="brake">Brake (S)</button>
+            <button class="control-btn" id="test-btn">Send Test Message</button>
+        </div>
+        <div id="status">Status: Disconnected<br>FPS: 0</div>
+    </div>
+    <script>
+        const ws = new WebSocket("ws://localhost:8765");
+        const videoFeed = document.getElementById("video-feed");
+        const ctx = videoFeed.getContext("2d");
+        const steeringWheel = document.getElementById("steering-wheel");
+        const wheelCtx = steeringWheel.getContext("2d");
+        const status = document.getElementById("status");
+        const accelerateBtn = document.getElementById("accelerate");
+        const brakeBtn = document.getElementById("brake");
+        const testBtn = document.getElementById("test-btn");
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let steeringAngle = 0; // -90 to 90 degrees
+        let throttle = 0; // -1 to 1
+        let isDragging = false;
+        const maxAngle = 90; // Max steering angle
+        let lastSent = 0; // For rate limiting
+
+        // Draw steering wheel
+        function drawWheel() {
+            wheelCtx.clearRect(0, 0, 150, 150);
+            wheelCtx.save();
+            wheelCtx.translate(75, 75);
+            wheelCtx.rotate((steeringAngle * Math.PI) / 180);
+            // Wheel circle
+            wheelCtx.beginPath();
+            wheelCtx.arc(0, 0, 70, 0, 2 * Math.PI);
+            wheelCtx.strokeStyle = "black";
+            wheelCtx.lineWidth = 10;
+            wheelCtx.stroke();
+            // Indicator
+            wheelCtx.beginPath();
+            wheelCtx.moveTo(0, -60);
+            wheelCtx.lineTo(0, -80);
+            wheelCtx.strokeStyle = "red";
+            wheelCtx.lineWidth = 5;
+            wheelCtx.stroke();
+            wheelCtx.restore();
+            // Steering value (-1 to 1)
+            const steering = steeringAngle / maxAngle;
+            sendControl(steering, throttle);
+        }
+
+        // WebSocket handlers
+        ws.onopen = () => {
+            console.log("Connected to WebSocket");
+            status.innerHTML = "Status: Connected<br>FPS: 0";
+            drawWheel();
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === "frame") {
+                    const img = new Image();
+                    img.src = `data:image/jpeg;base64,${msg.data}`;
+                    img.onload = () => {
+                        ctx.drawImage(img, 0, 0, 640, 360);
+                        frameCount++;
+                        const now = performance.now();
+                        if (now - lastTime >= 1000) {
+                            const fps = (frameCount / (now - lastTime) * 1000).toFixed(1);
+                            status.innerHTML = `Status: Connected<br>FPS: ${fps}`;
+                            console.log(`Received frame, FPS: ${fps}`);
+                            frameCount = 0;
+                            lastTime = now;
+                        }
+                    };
+                }
+            } catch (e) {
+                console.error("Error parsing message:", e);
+            }
+        };
+
+        ws.onclose = () => {
+            console.log("WebSocket closed");
+            status.innerHTML = "Status: Disconnected<br>FPS: 0";
+        };
+
+        ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            status.innerHTML = "Status: Error<br>FPS: 0";
+        };
+
+        // Steering wheel interaction
+        steeringWheel.addEventListener("mousedown", (e) => {
+            isDragging = true;
+            updateSteering(e);
+        });
+        steeringWheel.addEventListener("mousemove", (e) => {
+            if (isDragging) updateSteering(e);
+        });
+        steeringWheel.addEventListener("mouseup", () => {
+            isDragging = false;
+            // Smooth return to center
+            const returnInterval = setInterval(() => {
+                if (Math.abs(steeringAngle) < 1) {
+                    steeringAngle = 0;
+                    clearInterval(returnInterval);
+                } else {
+                    steeringAngle *= 0.9;
+                }
+                drawWheel();
+            }, 50);
+        });
+        steeringWheel.addEventListener("mouseleave", () => {
+            isDragging = false;
+        });
+
+        function updateSteering(e) {
+            const rect = steeringWheel.getBoundingClientRect();
+            const x = e.clientX - rect.left - 75;
+            const y = e.clientY - rect.top - 75;
+            const angle = (Math.atan2(y, x) * 180) / Math.PI - 90;
+            steeringAngle = Math.max(-maxAngle, Math.min(maxAngle, -angle));
+            drawWheel();
+        }
+
+        // Keyboard controls
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "a" || e.key === "A") {
+                steeringAngle = Math.max(steeringAngle - 5, -maxAngle);
+                drawWheel();
+            } else if (e.key === "d" || e.key === "D") {
+                steeringAngle = Math.min(steeringAngle + 5, maxAngle);
+                drawWheel();
+            } else if (e.key === "w" || e.key === "W") {
+                throttle = 0.8;
+                drawWheel();
+            } else if (e.key === "s" || e.key === "S") {
+                throttle = -0.8;
+                drawWheel();
+            }
+        });
+        document.addEventListener("keyup", (e) => {
+            if (e.key === "w" || e.key === "W" || e.key === "s" || e.key === "S") {
+                throttle = 0;
+                drawWheel();
+            }
+        });
+
+        // Button controls
+        accelerateBtn.addEventListener("mousedown", () => {
+            throttle = 0.8;
+            drawWheel();
+        });
+        accelerateBtn.addEventListener("mouseup", () => {
+            throttle = 0;
+            drawWheel();
+        });
+        brakeBtn.addEventListener("mousedown", () => {
+            throttle = -0.8;
+            drawWheel();
+        });
+        brakeBtn.addEventListener("mouseup", () => {
+            throttle = 0;
+            drawWheel();
+        });
+        testBtn.addEventListener("click", () => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "test", message: "Hello from client" }));
+                console.log("Sent test message");
+            }
+        });
+
+        // Send control messages (rate-limited)
+        function sendControl(steering, throttle) {
+            const now = performance.now();
+            if (now - lastSent < 50) return; // Limit to 20 messages/sec
+            lastSent = now;
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "control", steering, throttle }));
+            }
+        }
+    </script>
+</body>
+</html>
+```
